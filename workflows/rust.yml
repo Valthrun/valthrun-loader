@@ -20,7 +20,7 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2024-10-21
+          toolchain: nightly
           override: true
       - uses: actions/checkout@v3
         with:
