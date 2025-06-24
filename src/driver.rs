@@ -6,14 +6,22 @@ use crate::{fixes, util};
 
 #[derive(Debug, Error)]
 pub enum MapDriverError {
-    #[error("Nal Device is already in use")]
-    DeviceNalInUse,
-    #[error("Vulernable driver has been blocked")]
+    #[error("vulernable driver has been blocked (0xc0000603)")]
     DriverBlocklist,
+    #[error("failed to initialize the kernel driver logging system (0xcf000001)")]
+    LogInitFailed,
+    #[error("a function call initializing the kernel driver has failed (0xcf000002)")]
+    PreInitFailed,
+    #[error("failed to initialize the valthrun debug driver (0xcf000003)")]
+    InitFailed,
+
+    #[error("nal device is already in use")]
+    DeviceNalInUse,
+    #[error("failed to execute nal fix: {0:?}")]
+    NalFixError(anyhow::Error),
+
     #[error("failed to spawn kdmapper process")]
     SpawnProcess(#[from] tokio::io::Error),
-    #[error("failed to execute nal fix: {0}")]
-    NalFixError(anyhow::Error),
     #[error("Unknown kdmapper error: {0}")]
     Unknown(String),
 }
@@ -42,6 +50,18 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
 
     if stdout.contains("0xc0000603") {
         return Err(MapDriverError::DriverBlocklist);
+    }
+
+    if stdout.contains("0xcf000001") {
+        return Err(MapDriverError::LogInitFailed);
+    }
+
+    if stdout.contains("0xcf000002") {
+        return Err(MapDriverError::PreInitFailed);
+    }
+
+    if stdout.contains("0xcf000003") {
+        return Err(MapDriverError::InitFailed);
     }
 
     if stdout.contains("[+] success") && stdout.contains("0xcf000004") {
