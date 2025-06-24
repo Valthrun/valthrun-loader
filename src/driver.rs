@@ -44,35 +44,15 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
     let output = util::invoke_command(Command::new(kdmapper_path).arg(driver_path)).await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
-    if stdout.contains("Device\\Nal is already in use") {
-        return Err(MapDriverError::DeviceNalInUse);
+    match stdout.as_ref() {
+        s if s.contains("Device\\Nal is already in use") => Err(MapDriverError::DeviceNalInUse),
+        s if s.contains("0xc0000603") => Err(MapDriverError::DriverBlocklist),
+        s if s.contains("0xcf000001") => Err(MapDriverError::LogInitFailed),
+        s if s.contains("0xcf000002") => Err(MapDriverError::PreInitFailed),
+        s if s.contains("0xcf000003") => Err(MapDriverError::InitFailed),
+        s if s.contains("[+] success") => Ok(!s.contains("0xcf000004")), // CSTATUS_DRIVER_ALREADY_LOADED
+        s => Err(MapDriverError::Unknown(s.to_string())),
     }
-
-    if stdout.contains("0xc0000603") {
-        return Err(MapDriverError::DriverBlocklist);
-    }
-
-    if stdout.contains("0xcf000001") {
-        return Err(MapDriverError::LogInitFailed);
-    }
-
-    if stdout.contains("0xcf000002") {
-        return Err(MapDriverError::PreInitFailed);
-    }
-
-    if stdout.contains("0xcf000003") {
-        return Err(MapDriverError::InitFailed);
-    }
-
-    if stdout.contains("[+] success") && stdout.contains("0xcf000004") {
-        return Ok(false);
-    }
-
-    if stdout.contains("[+] success") {
-        return Ok(true);
-    }
-
-    return Err(MapDriverError::Unknown(stdout.to_string()));
 }
 
 pub async fn map_driver_handled(http: &reqwest::Client) -> anyhow::Result<()> {
