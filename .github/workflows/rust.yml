@@ -41,7 +41,7 @@ jobs:
       - name: Get package version
         shell: bash
         run: |
-          VERSION=$(cargo pkgid --manifest-path controller/Cargo.toml | cut -d# -f2 | cut -d: -f2)
+          VERSION=$(cargo pkgid --manifest-path Cargo.toml | cut -d# -f2 | cut -d: -f2)
           echo "Package version: $VERSION"
           echo "ARTIFACT_VERSION=$VERSION" >> "$GITHUB_ENV"
 
@@ -50,7 +50,7 @@ jobs:
           cache-on-failure: true
 
       - name: Build
-        run: cargo build --verbose --release --bin controller
+        run: cargo build --verbose --release --bin loader
         env:
           RUSTFLAGS: -Ctarget-feature=+crt-static
 
