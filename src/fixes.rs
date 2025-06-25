@@ -25,13 +25,13 @@ pub async fn execute_nal_fix(http: &reqwest::Client) -> anyhow::Result<()> {
 }
 
 pub fn set_hvci(enabled: bool) -> windows_registry::Result<()> {
-    let key = LOCAL_MACHINE.open(r"System\CurrentControlSet\Control\DeviceGuard\Scenarios")?;
+    let key = LOCAL_MACHINE.create(r"System\CurrentControlSet\Control\DeviceGuard\Scenarios")?;
     key.set_u32("HypervisorEnforcedCodeIntegrity", enabled.into())?;
     Ok(())
 }
 
 pub fn set_driver_blocklist(enabled: bool) -> windows_registry::Result<()> {
-    let key = LOCAL_MACHINE.open(r"System\CurrentControlSet\Control\CI\Config")?;
+    let key = LOCAL_MACHINE.create(r"System\CurrentControlSet\Control\CI\Config")?;
     key.set_u32("VulnerableDriverBlocklistEnable", enabled.into())?;
     Ok(())
 }
