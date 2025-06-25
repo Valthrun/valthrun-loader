@@ -50,7 +50,7 @@ jobs:
           cache-on-failure: true
 
       - name: Build
-        run: cargo build --verbose --release --bin loader
+        run: cargo build --verbose --release --bin valthrun-loader
         env:
           RUSTFLAGS: -Ctarget-feature=+crt-static
 
@@ -58,4 +58,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: loader.exe
-          path: target/release/loader.exe
+          path: target/release/valthrun-loader.exe
+
+      - name: Upload release build to portal
+        shell: bash
+        run: .github/workflows/artifact_upload.sh valthrun-loader target/release/valthrun-loader.exe
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          ARTIFACT_API_KEY: ${{ secrets.ARTIFACT_API_KEY }}
