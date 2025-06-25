@@ -847,28 +847,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
-name = "loader"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "embed-manifest",
- "env_logger",
- "futures",
- "inquire",
- "log",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "uuid",
- "windows-registry 0.5.3",
- "windows-result",
- "winres",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1730,6 +1708,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "458f7a779bf54acc9f347480ac654f68407d3aab21269a6e3c9f922acd9e2da9"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "valthrun-loader"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "embed-manifest",
+ "env_logger",
+ "futures",
+ "inquire",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "uuid",
+ "windows-registry 0.5.3",
+ "windows-result",
+ "winres",
 ]
 
 [[package]]
