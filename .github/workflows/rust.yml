@@ -62,7 +62,7 @@ jobs:
 
       - name: Upload release build to portal
         shell: bash
-        run: .github/workflows/artifact_upload.sh valthrun-loader target/release/valthrun-loader.exe
+        run: .github/workflows/artifact_upload.sh valthrun-loader win32 target/release/valthrun-loader.exe
         if: ${{ github.event_name != 'pull_request' }}
         env:
           ARTIFACT_API_KEY: ${{ secrets.ARTIFACT_API_KEY }}
