@@ -70,11 +70,20 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
         return Ok(());
     };
 
+    log::info!("A new update for the loader is available.");
+    log::info!(
+        "  Installed version: {} ({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    );
+    log::info!(
+        "  Available version: {} ({})",
+        update.0.version,
+        update.0.version_hash
+    );
+
     if !utils::confirm_default(
-        format!(
-            "A new update for the loader is available ({}). Do you want to download and install the latest version?",
-            update.0.version_hash
-        ),
+        "Do you want to download and install the latest version?",
         true,
     )? {
         return Ok(());

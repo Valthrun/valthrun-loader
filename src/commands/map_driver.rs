@@ -20,15 +20,13 @@ pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
     .context("failed to download kdmapper")?;
 
     for service in [c"faceit", c"vgc", c"vgk", c"ESEADriver2"] {
-        if fixes::is_service_running(service).context("check service running")?
-            && utils::confirm_default(
-                format!(
-                    "Running service '{}' may interfere with the Valthrun Kernel Driver. Do you want to stop it?",
-                    service.to_str()?
-                ),
-                true,
-            )?
-        {
+        if fixes::is_service_running(service).context("check service running")? {
+            log::warn!(
+                "Running service '{}' may interfere with the Valthrun Kernel Driver.",
+                service.to_str()?
+            );
+            utils::confirm_default("Do you want to stop it?", true)?;
+
             fixes::stop_service(service.to_str()?)
                 .await
                 .context("stop service")?;
