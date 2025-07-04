@@ -6,6 +6,7 @@ use std::{
 use anyhow::Context;
 use futures::StreamExt;
 use tokio::process::Command;
+use windows::Win32::System::Console::GetConsoleProcessList;
 
 pub async fn invoke_ps_command(command: &str) -> tokio::io::Result<Output> {
     self::invoke_command(Command::new("powershell").args(&["-Command", &command])).await
@@ -43,7 +44,7 @@ pub fn get_data_path() -> anyhow::Result<PathBuf> {
         .context("get current exe")?
         .parent()
         .context("get parent path")?
-        .join(".vthl");
+        .join(".vtl");
 
     std::fs::create_dir_all(&path)?;
 
@@ -71,6 +72,12 @@ pub async fn download_file(
     url: impl reqwest::IntoUrl,
     path: &Path,
 ) -> anyhow::Result<()> {
+    log::debug!(
+        "Downloading file from {} to {}",
+        url.as_str(),
+        path.display()
+    );
+
     let mut stream = http
         .get(url)
         .send()
@@ -97,4 +104,22 @@ pub async fn schedule_restart() -> anyhow::Result<()> {
     invoke_command(Command::new("shutdown").args(["/r", "/t", "0"])).await?;
 
     std::process::exit(1);
+}
+
+pub fn is_console_invoked() -> bool {
+    let mut result: [u32; 128] = [0u32; 128];
+
+    let console_count = unsafe { GetConsoleProcessList(&mut result) };
+    console_count > 1
+}
+
+pub fn console_pause() {
+    inquire::prompt_text("Press enter to continue...").expect("failed to prompt user");
+}
+
+pub fn confirm_default(message: impl AsRef<str>, default: bool) -> anyhow::Result<bool> {
+    inquire::Confirm::new(message.as_ref())
+        .with_default(default)
+        .prompt()
+        .context("prompt user")
 }

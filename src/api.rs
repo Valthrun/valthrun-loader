@@ -110,9 +110,18 @@ pub async fn get_latest_artifact_version(
     http: &Client,
     artifact_slug: &str,
 ) -> anyhow::Result<Version> {
-    let artifact = get_artifact(http, &artifact_slug).await?.artifact;
-    let track_response =
-        get_track(http, &artifact_slug, &artifact.default_track.to_string()).await?;
+    let artifact = get_artifact(http, artifact_slug).await?.artifact;
+
+    get_latest_artifact_track_version(http, artifact_slug, &artifact.default_track.to_string())
+        .await
+}
+
+pub async fn get_latest_artifact_track_version(
+    http: &Client,
+    artifact_slug: &str,
+    track_slug: &str,
+) -> anyhow::Result<Version> {
+    let track_response = get_track(http, &artifact_slug, &track_slug).await?;
 
     let latest_version = track_response
         .versions
