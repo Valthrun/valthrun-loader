@@ -14,12 +14,12 @@ use windows::{
 };
 use windows_registry::LOCAL_MACHINE;
 
-use crate::util::{self};
+use crate::utils::{self};
 
 pub async fn execute_nal_fix(http: &reqwest::Client) -> anyhow::Result<()> {
-    let path = util::get_downloads_path()?.join("nalfix.exe");
+    let path = utils::get_downloads_path()?.join("nalfix.exe");
 
-    util::download_file(
+    utils::download_file(
         http,
         "https://github.com/VollRagm/NalFix/releases/latest/download/NalFix.exe",
         &path,
@@ -27,7 +27,7 @@ pub async fn execute_nal_fix(http: &reqwest::Client) -> anyhow::Result<()> {
     .await
     .context("download file")?;
 
-    util::invoke_command(&mut Command::new(path))
+    utils::invoke_command(&mut Command::new(path))
         .await
         .context("execute command")?;
 
@@ -79,13 +79,13 @@ pub fn is_service_running(name: &CStr) -> anyhow::Result<bool> {
 }
 
 pub async fn stop_service(name: &str) -> anyhow::Result<()> {
-    util::invoke_command(Command::new("sc").args(["stop", name])).await?;
+    utils::invoke_command(Command::new("sc").args(["stop", name])).await?;
 
     Ok(())
 }
 
 pub async fn add_defender_exclusion(path: &Path) -> anyhow::Result<()> {
-    util::invoke_ps_command(&format!(
+    utils::invoke_ps_command(&format!(
         "Add-MpPreference -ExclusionPath '{}' -ErrorAction SilentlyContinue",
         path.display()
     ))

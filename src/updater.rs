@@ -1,7 +1,7 @@
 use anyhow::Context;
 use futures::StreamExt;
 
-use crate::{api, util};
+use crate::{api, utils};
 
 #[derive(Debug, Clone)]
 struct Update(api::Version);
@@ -70,7 +70,7 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
         return Ok(());
     };
 
-    if !util::confirm_default(
+    if !utils::confirm_default(
         format!(
             "A new update for the loader is available ({}). Do you want to download and install the latest version?",
             update.0.version_hash
@@ -94,7 +94,7 @@ async fn restart() -> ! {
     async fn restart_internal() -> anyhow::Result<()> {
         let current_exe = std::env::current_exe()?;
 
-        if util::is_console_invoked() {
+        if utils::is_console_invoked() {
             // If the loader is invoked from the command line, just spawn the process with the stdio inherited
             // and wait for it to exit.
 
@@ -110,7 +110,7 @@ async fn restart() -> ! {
             // If the loader is invoked normally, use Start-Process since that will not break is_console_invoked().
             // Arguments do not matter in this case, and the current process exits after spawning the new one.
 
-            util::invoke_ps_command(&format!(
+            utils::invoke_ps_command(&format!(
                 "Start-Process -FilePath '{}'",
                 current_exe.display(),
             ))
@@ -127,8 +127,8 @@ async fn restart() -> ! {
         log::error!("{:#}", e);
         log::error!("Please restart the loader manually.");
 
-        if util::is_console_invoked() {
-            util::console_pause();
+        if utils::is_console_invoked() {
+            utils::console_pause();
         }
     }
 

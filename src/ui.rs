@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use crate::{AppCommand, Enhancer};
+use crate::{AppCommand, components};
 
 const MENU_OPTIONS: LazyLock<Vec<(&'static str, AppCommand)>> = LazyLock::new(|| {
     Vec::from([
@@ -12,13 +12,13 @@ const MENU_OPTIONS: LazyLock<Vec<(&'static str, AppCommand)>> = LazyLock::new(||
         (
             "Launch Overlay",
             AppCommand::Launch {
-                enhancer: Enhancer::Cs2Overlay,
+                enhancer: components::Enhancer::Cs2Overlay,
             },
         ),
         (
             "Launch Standalone Radar",
             AppCommand::Launch {
-                enhancer: Enhancer::Cs2StandaloneRadar,
+                enhancer: components::Enhancer::Cs2StandaloneRadar,
             },
         ),
         ("Show Version", AppCommand::Version),

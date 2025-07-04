@@ -1,6 +1,6 @@
 use anyhow::Context;
 
-use crate::{api, components, game, util};
+use crate::{api, components, game, utils};
 
 pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> anyhow::Result<()> {
     for artifact in enhancer.required_artifacts() {
@@ -20,7 +20,7 @@ pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> a
     } else {
         log::info!("Counter-Strike 2 is not running.");
 
-        if util::confirm_default("Do you want to launch the game?", true)? {
+        if utils::confirm_default("Do you want to launch the game?", true)? {
             log::info!("Waiting for Counter-Strike 2 to start");
             game::launch_and_wait()
                 .await
@@ -28,9 +28,9 @@ pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> a
         }
     }
 
-    util::invoke_ps_command(&format!(
+    utils::invoke_ps_command(&format!(
         "Start-Process -FilePath '{}' -WorkingDirectory '{}'",
-        util::get_downloads_path()?
+        utils::get_downloads_path()?
             .join(enhancer.artifact_to_execute().file_name())
             .display(),
         std::env::current_exe()

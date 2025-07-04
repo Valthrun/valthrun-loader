@@ -1,6 +1,6 @@
 use anyhow::Context;
 
-use crate::{api, driver, fixes, util};
+use crate::{api, driver, fixes, utils};
 
 pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
     log::info!("Downloading Kernel Driver");
@@ -11,17 +11,17 @@ pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
 
     log::info!("Downloading KDMapper");
 
-    util::download_file(
+    utils::download_file(
         &http,
         "https://github.com/sinjs/kdmapper/releases/latest/download/kdmapper.exe",
-        &util::get_downloads_path()?.join("kdmapper.exe"),
+        &utils::get_downloads_path()?.join("kdmapper.exe"),
     )
     .await
     .context("failed to download kdmapper")?;
 
     for service in [c"faceit", c"vgc", c"vgk", c"ESEADriver2"] {
         if fixes::is_service_running(service).context("check service running")?
-            && util::confirm_default(
+            && utils::confirm_default(
                 format!(
                     "Running service '{}' may interfere with the Valthrun Kernel Driver. Do you want to stop it?",
                     service.to_str()?
