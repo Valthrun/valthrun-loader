@@ -1,8 +1,8 @@
 use anyhow::Context;
 
-use crate::{Enhancer, api, game, util};
+use crate::{api, components, game, util};
 
-pub async fn launch(http: &reqwest::Client, enhancer: Enhancer) -> anyhow::Result<()> {
+pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> anyhow::Result<()> {
     for artifact in enhancer.required_artifacts() {
         log::info!("Downloading {}", artifact.name());
 

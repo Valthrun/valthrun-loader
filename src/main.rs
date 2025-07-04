@@ -1,11 +1,11 @@
 use std::process::ExitCode;
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand, ValueEnum};
-use serde::{Deserialize, Serialize};
+use clap::{Parser, Subcommand};
 
 mod api;
 mod commands;
+mod components;
 mod driver;
 mod fixes;
 mod game;
@@ -24,69 +24,6 @@ pub struct AppArgs {
     command: Option<AppCommand>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Artifact {
-    Cs2Overlay,
-    Cs2RadarClient,
-    DriverInterfaceKernel,
-    KernelDriver,
-}
-
-impl Artifact {
-    pub const fn name(&self) -> &'static str {
-        match self {
-            Artifact::Cs2Overlay => "CS2 Overlay",
-            Artifact::Cs2RadarClient => "CS2 Radar Client",
-            Artifact::DriverInterfaceKernel => "Driver Interface Kernel",
-            Artifact::KernelDriver => "Kernel Driver",
-        }
-    }
-
-    pub const fn slug(&self) -> &'static str {
-        match self {
-            Artifact::Cs2Overlay => "cs2-overlay",
-            Artifact::Cs2RadarClient => "cs2-radar-client",
-            Artifact::DriverInterfaceKernel => "driver-interface-kernel",
-            Artifact::KernelDriver => "kernel-driver",
-        }
-    }
-
-    pub const fn file_name(&self) -> &'static str {
-        match self {
-            Artifact::Cs2Overlay => "cs2_overlay.exe",
-            Artifact::Cs2RadarClient => "cs2_radar_client.exe",
-            Artifact::DriverInterfaceKernel => "driver_interface_kernel.dll",
-            Artifact::KernelDriver => "kernel_driver.sys",
-        }
-    }
-}
-
-#[derive(ValueEnum, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[clap(rename_all = "kebab-case")]
-pub enum Enhancer {
-    Cs2Overlay,
-    Cs2StandaloneRadar,
-}
-
-impl Enhancer {
-    pub const fn required_artifacts(&self) -> &'static [&'static Artifact] {
-        match self {
-            Enhancer::Cs2Overlay => &[&Artifact::Cs2Overlay, &Artifact::DriverInterfaceKernel],
-            Enhancer::Cs2StandaloneRadar => {
-                &[&Artifact::Cs2RadarClient, &Artifact::DriverInterfaceKernel]
-            }
-        }
-    }
-
-    pub const fn artifact_to_execute(&self) -> &'static Artifact {
-        match self {
-            Enhancer::Cs2Overlay => &Artifact::Cs2Overlay,
-            Enhancer::Cs2StandaloneRadar => &Artifact::Cs2RadarClient,
-        }
-    }
-}
-
 #[derive(Subcommand, Debug, Clone)]
 pub enum AppCommand {
     /// Quickly launch Valthrun with all the default settings and commands
@@ -96,7 +33,7 @@ pub enum AppCommand {
     MapDriver,
 
     /// Download and launch a enhancer
-    Launch { enhancer: Enhancer },
+    Launch { enhancer: components::Enhancer },
 
     /// Display the version
     Version,
@@ -115,7 +52,7 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
                 .await
                 .context("execute map driver command")?;
 
-            commands::launch(&http, Enhancer::Cs2Overlay)
+            commands::launch(&http, components::Enhancer::Cs2Overlay)
                 .await
                 .context("execute launch enhancer command")?;
         }
