@@ -37,10 +37,6 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
         log::warn!("Failed to add exclusion for Windows Defender: {:#}", e);
     };
 
-    for service in ["faceit", "vgc", "vgk", "ESEADriver2"] {
-        let _ = fixes::disable_service(service).await;
-    }
-
     let output = util::invoke_command(Command::new(kdmapper_path).arg(driver_path)).await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -55,7 +51,7 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
     }
 }
 
-pub async fn map_driver_handled(http: &reqwest::Client) -> anyhow::Result<()> {
+pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
     if let Err(e) = map_driver().await {
         match e {
             MapDriverError::DeviceNalInUse => {
@@ -65,22 +61,32 @@ pub async fn map_driver_handled(http: &reqwest::Client) -> anyhow::Result<()> {
                 map_driver().await?;
             }
             MapDriverError::DriverBlocklist => {
-                if let Err(e) = fixes::set_driver_blocklist(false) {
-                    log::warn!("Failed to disable vulnerable driver blocklist: {:#}", e);
-                }
-                if let Err(e) = fixes::set_hvci(false) {
-                    log::warn!("Failed to disable HVCI: {:#}", e);
-                }
+                log::warn!(
+                    "Failed to load the driver due to the Vulnerable Driver Blocklist or HVCI being enabled."
+                );
 
-                log::warn!("The system must restart to continue changing system settings.");
-                let should_restart = inquire::prompt_confirmation("Do you want to restart now?")
-                    .context("prompt for restart")?;
+                if util::confirm_default(
+                    "Do you want to disable these Windows security features?",
+                    true,
+                )? {
+                    if let Err(e) = fixes::set_driver_blocklist(false) {
+                        log::warn!("Failed to disable vulnerable driver blocklist: {:#}", e);
+                    }
+                    if let Err(e) = fixes::set_hvci(false) {
+                        log::warn!("Failed to disable HVCI: {:#}", e);
+                    }
 
-                if should_restart {
-                    util::schedule_restart().await.context("schedule restart")?;
+                    log::warn!("The system must restart to apply changes to the system settings.");
+                    let should_restart =
+                        inquire::prompt_confirmation("Do you want to restart now?")
+                            .context("prompt for restart")?;
+
+                    if should_restart {
+                        util::schedule_restart().await.context("schedule restart")?;
+                    }
+
+                    std::process::exit(0);
                 }
-
-                std::process::exit(0);
             }
             e => anyhow::bail!(e),
         }

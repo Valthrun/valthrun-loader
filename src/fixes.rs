@@ -1,7 +1,17 @@
-use std::path::Path;
+use std::{ffi::CStr, path::Path};
 
 use anyhow::Context;
 use tokio::process::Command;
+use windows::{
+    Win32::{
+        Foundation::ERROR_SERVICE_DOES_NOT_EXIST,
+        System::Services::{
+            OpenSCManagerA, OpenServiceA, QueryServiceStatus, SC_MANAGER_CONNECT,
+            SERVICE_QUERY_STATUS, SERVICE_RUNNING, SERVICE_STATUS,
+        },
+    },
+    core::PCSTR,
+};
 use windows_registry::LOCAL_MACHINE;
 
 use crate::util::{self};
@@ -36,7 +46,39 @@ pub fn set_driver_blocklist(enabled: bool) -> windows_registry::Result<()> {
     Ok(())
 }
 
-pub async fn disable_service(name: &str) -> anyhow::Result<()> {
+pub fn is_service_running(name: &CStr) -> anyhow::Result<bool> {
+    let running = unsafe {
+        let hsc_manager = OpenSCManagerA(None, None, SC_MANAGER_CONNECT | SERVICE_QUERY_STATUS)
+            .context("OpenSCManagerA")?;
+
+        let service = match OpenServiceA(
+            hsc_manager,
+            PCSTR(name.as_ptr() as *const u8),
+            SERVICE_QUERY_STATUS,
+        ) {
+            Ok(handle) => handle,
+            Err(error) if error.code() == ERROR_SERVICE_DOES_NOT_EXIST.to_hresult() => {
+                return Ok(false);
+            }
+            Err(error) => {
+                anyhow::bail!(
+                    "failed to open service '{}': {}",
+                    name.to_string_lossy(),
+                    error
+                )
+            }
+        };
+
+        let mut status = SERVICE_STATUS::default();
+        QueryServiceStatus(service, &mut status).context("QueryServiceStatus")?;
+
+        status.dwCurrentState == SERVICE_RUNNING
+    };
+
+    Ok(running)
+}
+
+pub async fn stop_service(name: &str) -> anyhow::Result<()> {
     util::invoke_command(Command::new("sc").args(["stop", name])).await?;
 
     Ok(())
