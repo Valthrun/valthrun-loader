@@ -11,7 +11,7 @@ mod fixes;
 mod game;
 mod ui;
 mod updater;
-mod util;
+mod utils;
 mod version;
 
 #[derive(Parser, Debug)]
@@ -83,8 +83,8 @@ async fn main() -> ExitCode {
         Err(e) => {
             eprintln!("Failed to parse arguments:\n{:#}", e);
 
-            if !util::is_console_invoked() {
-                util::console_pause();
+            if !utils::is_console_invoked() {
+                utils::console_pause();
             }
             return ExitCode::FAILURE;
         }
@@ -108,8 +108,8 @@ async fn main() -> ExitCode {
         }
     };
 
-    if !util::is_console_invoked() {
-        util::console_pause();
+    if !utils::is_console_invoked() {
+        utils::console_pause();
     }
 
     status

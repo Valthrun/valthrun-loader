@@ -1,6 +1,6 @@
 use anyhow::Context;
 
-use crate::util;
+use crate::utils;
 
 pub fn compare_hashes(first: &str, second: &str) -> bool {
     let first = normalize_hash(first);
@@ -14,7 +14,7 @@ pub fn normalize_hash(hash: &str) -> String {
 }
 
 pub async fn get_stored_version_hash(artifact_slug: &str) -> anyhow::Result<Option<String>> {
-    let path = util::get_versions_path()
+    let path = utils::get_versions_path()
         .context("get versions path")?
         .join(artifact_slug);
 
@@ -30,7 +30,7 @@ pub async fn get_stored_version_hash(artifact_slug: &str) -> anyhow::Result<Opti
 }
 
 pub async fn set_stored_version_hash(artifact_slug: &str, hash: &str) -> anyhow::Result<()> {
-    let path = util::get_versions_path()
+    let path = utils::get_versions_path()
         .context("get versions path")?
         .join(artifact_slug);
 

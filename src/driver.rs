@@ -2,7 +2,7 @@ use anyhow::Context;
 use thiserror::Error;
 use tokio::process::Command;
 
-use crate::{fixes, util};
+use crate::{fixes, utils};
 
 #[derive(Debug, Error)]
 pub enum MapDriverError {
@@ -27,7 +27,7 @@ pub enum MapDriverError {
 }
 
 pub async fn map_driver() -> Result<bool, MapDriverError> {
-    let downloads_path = util::get_downloads_path()
+    let downloads_path = utils::get_downloads_path()
         .context("get downloads path")
         .unwrap();
     let kdmapper_path = downloads_path.join("kdmapper.exe");
@@ -37,7 +37,7 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
         log::warn!("Failed to add exclusion for Windows Defender: {:#}", e);
     };
 
-    let output = util::invoke_command(Command::new(kdmapper_path).arg(driver_path)).await?;
+    let output = utils::invoke_command(Command::new(kdmapper_path).arg(driver_path)).await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     match stdout.as_ref() {
@@ -65,7 +65,7 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
                     "Failed to load the driver due to the Vulnerable Driver Blocklist or HVCI being enabled."
                 );
 
-                if util::confirm_default(
+                if utils::confirm_default(
                     "Do you want to disable these Windows security features?",
                     true,
                 )? {
@@ -82,7 +82,9 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
                             .context("prompt for restart")?;
 
                     if should_restart {
-                        util::schedule_restart().await.context("schedule restart")?;
+                        utils::schedule_restart()
+                            .await
+                            .context("schedule restart")?;
                     }
 
                     std::process::exit(0);
