@@ -52,6 +52,26 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
 }
 
 pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
+    let downloads_path = utils::get_downloads_path()
+        .context("get downloads path")
+        .unwrap();
+    let kdmapper_path = downloads_path.join("kdmapper.exe");
+
+    if fixes::is_defender_enabled()
+        .await
+        .context("check is defender enabled")?
+        && !fixes::has_defender_exclusion(&kdmapper_path)
+            .await
+            .context("check defender exclusion")?
+    {
+        log::warn!("Windows Defender is enabled and there is no exclusion for the driver mapper.");
+        if utils::confirm_default("Do you want to add an exclusion?", true)? {
+            fixes::add_defender_exclusion(&kdmapper_path)
+                .await
+                .context("failed to add defender exclusion")?
+        }
+    }
+
     if let Err(e) = map_driver().await {
         match e {
             MapDriverError::DeviceNalInUse => {

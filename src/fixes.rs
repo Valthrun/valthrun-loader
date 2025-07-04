@@ -84,6 +84,42 @@ pub async fn stop_service(name: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn parse_powershell_boolean(output: impl AsRef<str>) -> anyhow::Result<bool> {
+    let output = output.as_ref();
+    if output.contains("True") {
+        Ok(true)
+    } else if output.contains("False") {
+        Ok(false)
+    } else {
+        anyhow::bail!(
+            "failed to parse command output: (expected powershell boolean, got: '{}')",
+            output
+        )
+    }
+}
+
+pub async fn is_defender_enabled() -> anyhow::Result<bool> {
+    let output =
+        utils::invoke_ps_command(&format!("(Get-MpComputerStatus).RealTimeProtectionEnabled"))
+            .await?;
+
+    let output = String::from_utf8_lossy(&output.stdout);
+
+    parse_powershell_boolean(output)
+}
+
+pub async fn has_defender_exclusion(path: &Path) -> anyhow::Result<bool> {
+    let output = utils::invoke_ps_command(&format!(
+        "(Get-MpPreference).ExclusionPath -contains '{}'",
+        path.display()
+    ))
+    .await?;
+
+    let output = String::from_utf8_lossy(&output.stdout);
+
+    parse_powershell_boolean(output)
+}
+
 pub async fn add_defender_exclusion(path: &Path) -> anyhow::Result<()> {
     utils::invoke_ps_command(&format!(
         "Add-MpPreference -ExclusionPath '{}' -ErrorAction SilentlyContinue",
