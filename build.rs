@@ -9,7 +9,7 @@ use winres::WindowsResource;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
-        let git_hash = if Path::new("../.git").exists() {
+        let git_hash = if Path::new(".git").exists() {
             match { Command::new("git").args(&["rev-parse", "HEAD"]).output() } {
                 Ok(output) => String::from_utf8(output.stdout).expect("the git hash to be utf-8"),
                 Err(error) => {

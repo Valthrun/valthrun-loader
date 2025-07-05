@@ -2,7 +2,7 @@ use anyhow::Context;
 use thiserror::Error;
 use tokio::process::Command;
 
-use crate::{fixes, util};
+use crate::{fixes, utils};
 
 #[derive(Debug, Error)]
 pub enum MapDriverError {
@@ -27,7 +27,7 @@ pub enum MapDriverError {
 }
 
 pub async fn map_driver() -> Result<bool, MapDriverError> {
-    let downloads_path = util::get_downloads_path()
+    let downloads_path = utils::get_downloads_path()
         .context("get downloads path")
         .unwrap();
     let kdmapper_path = downloads_path.join("kdmapper.exe");
@@ -37,11 +37,7 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
         log::warn!("Failed to add exclusion for Windows Defender: {:#}", e);
     };
 
-    for service in ["faceit", "vgc", "vgk", "ESEADriver2"] {
-        let _ = fixes::disable_service(service).await;
-    }
-
-    let output = util::invoke_command(Command::new(kdmapper_path).arg(driver_path)).await?;
+    let output = utils::invoke_command(Command::new(kdmapper_path).arg(driver_path)).await?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     match stdout.as_ref() {
@@ -55,7 +51,27 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
     }
 }
 
-pub async fn map_driver_handled(http: &reqwest::Client) -> anyhow::Result<()> {
+pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
+    let downloads_path = utils::get_downloads_path()
+        .context("get downloads path")
+        .unwrap();
+    let kdmapper_path = downloads_path.join("kdmapper.exe");
+
+    if fixes::is_defender_enabled()
+        .await
+        .context("check is defender enabled")?
+        && !fixes::has_defender_exclusion(&kdmapper_path)
+            .await
+            .context("check defender exclusion")?
+    {
+        log::warn!("Windows Defender is enabled and there is no exclusion for the driver mapper.");
+        if utils::confirm_default("Do you want to add an exclusion?", true)? {
+            fixes::add_defender_exclusion(&kdmapper_path)
+                .await
+                .context("failed to add defender exclusion")?
+        }
+    }
+
     if let Err(e) = map_driver().await {
         match e {
             MapDriverError::DeviceNalInUse => {
@@ -65,22 +81,34 @@ pub async fn map_driver_handled(http: &reqwest::Client) -> anyhow::Result<()> {
                 map_driver().await?;
             }
             MapDriverError::DriverBlocklist => {
-                if let Err(e) = fixes::set_driver_blocklist(false) {
-                    log::warn!("Failed to disable vulnerable driver blocklist: {:#}", e);
-                }
-                if let Err(e) = fixes::set_hvci(false) {
-                    log::warn!("Failed to disable HVCI: {:#}", e);
-                }
+                log::warn!(
+                    "Failed to load the driver due to the Vulnerable Driver Blocklist or HVCI being enabled."
+                );
 
-                log::warn!("The system must restart to continue changing system settings.");
-                let should_restart = inquire::prompt_confirmation("Do you want to restart now?")
-                    .context("prompt for restart")?;
+                if utils::confirm_default(
+                    "Do you want to disable these Windows security features?",
+                    true,
+                )? {
+                    if let Err(e) = fixes::set_driver_blocklist(false) {
+                        log::warn!("Failed to disable vulnerable driver blocklist: {:#}", e);
+                    }
+                    if let Err(e) = fixes::set_hvci(false) {
+                        log::warn!("Failed to disable HVCI: {:#}", e);
+                    }
 
-                if should_restart {
-                    util::schedule_restart().await.context("schedule restart")?;
+                    log::warn!("The system must restart to apply changes to the system settings.");
+                    let should_restart =
+                        inquire::prompt_confirmation("Do you want to restart now?")
+                            .context("prompt for restart")?;
+
+                    if should_restart {
+                        utils::schedule_restart()
+                            .await
+                            .context("schedule restart")?;
+                    }
+
+                    std::process::exit(0);
                 }
-
-                std::process::exit(0);
             }
             e => anyhow::bail!(e),
         }

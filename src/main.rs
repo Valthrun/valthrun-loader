@@ -1,102 +1,116 @@
-use std::collections::HashMap;
+use std::process::ExitCode;
 
-use crate::api::download_latest_artifact_version;
 use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
 
 mod api;
+mod commands;
+mod components;
 mod driver;
 mod fixes;
 mod game;
-mod util;
+mod ui;
+mod updater;
+mod utils;
 mod version;
 
-async fn real_main() -> Result<()> {
+#[derive(Parser, Debug)]
+pub struct AppArgs {
+    /// Enable verbose logging ($env:RUST_LOG="trace")
+    #[clap(short, long)]
+    verbose: bool,
+
+    #[command(subcommand)]
+    command: Option<AppCommand>,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum AppCommand {
+    /// Quickly launch Valthrun with all the default settings and commands
+    QuickStart,
+
+    /// Download and map the driver
+    MapDriver,
+
+    /// Download and launch a enhancer
+    Launch { enhancer: components::Enhancer },
+
+    /// Display the version
+    Version,
+}
+
+async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let http = reqwest::Client::new();
 
-    log::info!(
-        "Valthrun Loader v{} ({})",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    );
-    log::info!("Current executable was built on {}", env!("BUILD_TIME"));
+    updater::ui_updater(&http).await?;
 
-    // Download all artifacts from the Valthrun Portal
-    log::info!("Starting download process...");
-    let artifact_file_names = HashMap::from([
-        ("cs2-overlay", "cs2_overlay.exe"),
-        ("driver-interface-kernel", "driver_interface_kernel.dll"),
-        ("kernel-driver", "kernel_driver.sys"),
-    ]);
-    for (artifact_slug, file_name) in artifact_file_names.iter() {
-        download_latest_artifact_version(&http, artifact_slug, file_name)
-            .await
-            .with_context(|| {
-                format!(
-                    "failed to download latest artifact version for '{}'",
-                    artifact_slug
-                )
-            })?;
+    let command = args.command.map(Ok).unwrap_or_else(ui::app_menu)?;
+
+    match command {
+        AppCommand::QuickStart => {
+            commands::map_driver(&http)
+                .await
+                .context("execute map driver command")?;
+
+            commands::launch(&http, components::Enhancer::Cs2Overlay)
+                .await
+                .context("execute launch enhancer command")?;
+        }
+        AppCommand::Launch { enhancer } => {
+            commands::launch(&http, enhancer)
+                .await
+                .context("execute launch enhancer command")?;
+        }
+        AppCommand::MapDriver => {
+            commands::map_driver(&http)
+                .await
+                .context("execute map driver command")?;
+        }
+        AppCommand::Version => {
+            log::info!("Valthrun Loader");
+            log::info!("  Version: v{}", env!("CARGO_PKG_VERSION"));
+            log::info!("  Build: {} ({})", env!("GIT_HASH"), env!("BUILD_TIME"))
+        }
     }
 
-    // Download kdmapper
-    log::info!("Downloading additional components...");
-    util::download_file(
-        &http,
-        "https://github.com/sinjs/kdmapper/releases/latest/download/kdmapper.exe",
-        &util::get_downloads_path()?.join("kdmapper.exe"),
-    )
-    .await
-    .context("failed to download kdmapper")?;
-    log::info!("All files downloaded and processed successfully.");
-
-    // Map the driver
-    log::info!("Mapping driver...");
-    driver::map_driver_handled(&http)
-        .await
-        .context("failed to map driver with error handling")?;
-
-    // Launch the game
-    if game::is_running()
-        .await
-        .context("failed to check if game is running")?
-    {
-        log::info!("Counter-Strike 2 is already running.");
-    } else {
-        log::info!("Waiting for Counter-Strike 2 to start...");
-        game::launch_and_wait()
-            .await
-            .context("failed to wait for cs2 to launch")?;
-    }
-
-    // Launch the overlay
-    log::info!("Valthrun will now load. Have fun!");
-    util::invoke_ps_command(&format!(
-        "Start-Process -FilePath '{}' -WorkingDirectory '{}'",
-        util::get_downloads_path()?
-            .join("cs2_overlay.exe")
-            .display(),
-        std::env::current_exe()
-            .context("get current exe")?
-            .parent()
-            .context("get parent path")?
-            .display()
-    ))
-    .await
-    .context("failed to start overlay")?;
-
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
+    let args = match AppArgs::try_parse() {
+        Ok(args) => args,
+        Err(e) => {
+            eprintln!("Failed to parse arguments:\n{:#}", e);
+
+            if !utils::is_console_invoked() {
+                utils::console_pause();
+            }
+            return ExitCode::FAILURE;
+        }
+    };
+
     env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(if args.verbose {
+            log::LevelFilter::Trace
+        } else {
+            log::LevelFilter::Info
+        })
+        .format_target(args.verbose || cfg!(debug_assertions))
         .parse_default_env()
         .init();
 
-    if let Err(e) = real_main().await {
-        log::error!("{:#}", e);
+    let status = match real_main(args).await {
+        Ok(status) => status,
+        Err(e) => {
+            log::error!("{:#}", e);
+            ExitCode::FAILURE
+        }
+    };
+
+    if !utils::is_console_invoked() {
+        utils::console_pause();
     }
 
-    inquire::prompt_text("Press enter to continue...").expect("failed to prompt user");
+    status
 }

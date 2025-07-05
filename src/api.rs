@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    util::{self},
+    utils::{self},
     version::{self},
 };
 
@@ -110,9 +110,18 @@ pub async fn get_latest_artifact_version(
     http: &Client,
     artifact_slug: &str,
 ) -> anyhow::Result<Version> {
-    let artifact = get_artifact(http, &artifact_slug).await?.artifact;
-    let track_response =
-        get_track(http, &artifact_slug, &artifact.default_track.to_string()).await?;
+    let artifact = get_artifact(http, artifact_slug).await?.artifact;
+
+    get_latest_artifact_track_version(http, artifact_slug, &artifact.default_track.to_string())
+        .await
+}
+
+pub async fn get_latest_artifact_track_version(
+    http: &Client,
+    artifact_slug: &str,
+    track_slug: &str,
+) -> anyhow::Result<Version> {
+    let track_response = get_track(http, &artifact_slug, &track_slug).await?;
 
     let latest_version = track_response
         .versions
@@ -137,7 +146,7 @@ pub async fn download_latest_artifact_version(
         .await
         .context("get stored version hash")?;
 
-    let output_path = util::get_downloads_path()
+    let output_path = utils::get_downloads_path()
         .context("get downloads path")?
         .join(output_name);
 
@@ -146,7 +155,7 @@ pub async fn download_latest_artifact_version(
             .is_none_or(|hash| !version::compare_hashes(&hash, &latest_version.version_hash));
 
     if should_download {
-        util::download_file(
+        utils::download_file(
             http,
             format!(
                 "https://valth.run/api/artifacts/{}/{}/{}/download",
