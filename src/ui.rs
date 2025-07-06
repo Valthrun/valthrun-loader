@@ -1,29 +1,25 @@
-use std::sync::LazyLock;
-
 use crate::{AppCommand, components};
 
-const MENU_OPTIONS: LazyLock<Vec<(&'static str, AppCommand)>> = LazyLock::new(|| {
-    Vec::from([
-        (
-            "Launch Valthrun with default settings",
-            AppCommand::QuickStart,
-        ),
-        ("Map Driver", AppCommand::MapDriver),
-        (
-            "Launch Overlay",
-            AppCommand::Launch {
-                enhancer: components::Enhancer::Cs2Overlay,
-            },
-        ),
-        (
-            "Launch Standalone Radar",
-            AppCommand::Launch {
-                enhancer: components::Enhancer::Cs2StandaloneRadar,
-            },
-        ),
-        ("Show Version", AppCommand::Version),
-    ])
-});
+const MENU_OPTIONS: &[(&'static str, AppCommand)] = &[
+    (
+        "Launch Valthrun with default settings",
+        AppCommand::QuickStart,
+    ),
+    ("Map Driver", AppCommand::MapDriver),
+    (
+        "Launch Overlay",
+        AppCommand::Launch {
+            enhancer: components::Enhancer::Cs2Overlay,
+        },
+    ),
+    (
+        "Launch Standalone Radar",
+        AppCommand::Launch {
+            enhancer: components::Enhancer::Cs2StandaloneRadar,
+        },
+    ),
+    ("Show Version", AppCommand::Version),
+];
 
 pub fn app_menu() -> anyhow::Result<AppCommand> {
     log::info!(

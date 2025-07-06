@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    components,
     utils::{self},
     version::{self},
 };
@@ -135,40 +136,62 @@ pub async fn get_latest_artifact_track_version(
 
 pub async fn download_latest_artifact_version(
     http: &Client,
-    artifact_slug: &str,
-    output_name: &str,
+    artifact: components::Artifact,
 ) -> anyhow::Result<PathBuf> {
-    let latest_version = get_latest_artifact_version(http, artifact_slug)
+    let latest_version = get_latest_artifact_version(http, artifact.slug())
         .await
         .context("get latest artifact version")?;
 
-    let stored_hash = version::get_stored_version_hash(artifact_slug)
+    let stored_hash = version::get_stored_version_hash(artifact.slug())
         .await
         .context("get stored version hash")?;
 
     let output_path = utils::get_downloads_path()
         .context("get downloads path")?
-        .join(output_name);
+        .join(artifact.file_name());
 
     let should_download = !output_path.is_file()
         || stored_hash
             .is_none_or(|hash| !version::compare_hashes(&hash, &latest_version.version_hash));
 
     if should_download {
+        if output_path.is_file() {
+            log::info!(
+                "{} is outdated. Downloading new version {} ({}).",
+                artifact.name(),
+                latest_version.version,
+                latest_version.version_hash
+            );
+        } else {
+            log::info!(
+                "{} not found locally. Downloading version {} ({}).",
+                artifact.name(),
+                latest_version.version,
+                latest_version.version_hash
+            );
+        }
+
         utils::download_file(
             http,
             format!(
                 "https://valth.run/api/artifacts/{}/{}/{}/download",
-                artifact_slug, latest_version.track, latest_version.id
+                artifact.slug(),
+                latest_version.track,
+                latest_version.id
             ),
             &output_path,
         )
         .await
         .context("download file")?;
 
-        version::set_stored_version_hash(artifact_slug, &latest_version.version_hash)
+        version::set_stored_version_hash(artifact.slug(), &latest_version.version_hash)
             .await
             .context("set stored version hash")?;
+    } else {
+        log::info!(
+            "Latest version of {} found locally. Skipping download.",
+            artifact.name()
+        );
     }
 
     Ok(output_path)
