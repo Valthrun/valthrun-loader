@@ -1,11 +1,26 @@
 use anyhow::Context;
 
-use crate::{api, driver, fixes, utils};
+use crate::{api, components, driver, fixes, utils};
 
 pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
-    log::info!("Downloading Kernel Driver");
+    log::info!("Checking for interfering services");
 
-    api::download_latest_artifact_version(http, "kernel-driver", "kernel_driver.sys")
+    for service in [c"faceit", c"vgc", c"vgk", c"ESEADriver2"] {
+        if fixes::is_service_running(service).context("check service running")? {
+            log::error!(
+                "The service '{}' will cause the driver mapping to fail. In order to proceed, you need to stop this service.",
+                service.to_str()?
+            );
+
+            if utils::confirm_default("Do you want to stop this service?", true)? {
+                fixes::stop_service(service.to_str()?)
+                    .await
+                    .context("stop service")?;
+            }
+        }
+    }
+
+    api::download_latest_artifact_version(http, components::Artifact::KernelDriver)
         .await
         .context("failed to download kernel driver")?;
 
@@ -18,20 +33,6 @@ pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
     )
     .await
     .context("failed to download kdmapper")?;
-
-    for service in [c"faceit", c"vgc", c"vgk", c"ESEADriver2"] {
-        if fixes::is_service_running(service).context("check service running")? {
-            log::warn!(
-                "Running service '{}' may interfere with the Valthrun Kernel Driver.",
-                service.to_str()?
-            );
-            utils::confirm_default("Do you want to stop it?", true)?;
-
-            fixes::stop_service(service.to_str()?)
-                .await
-                .context("stop service")?;
-        }
-    }
 
     driver::ui_map_driver(&http)
         .await

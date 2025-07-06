@@ -81,7 +81,7 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
                 map_driver().await?;
             }
             MapDriverError::DriverBlocklist => {
-                log::warn!(
+                log::error!(
                     "Failed to load the driver due to the Vulnerable Driver Blocklist or HVCI being enabled."
                 );
 
@@ -90,24 +90,28 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
                     true,
                 )? {
                     if let Err(e) = fixes::set_driver_blocklist(false) {
-                        log::warn!("Failed to disable vulnerable driver blocklist: {:#}", e);
+                        log::error!("Failed to disable vulnerable driver blocklist: {:#}", e);
                     }
                     if let Err(e) = fixes::set_hvci(false) {
-                        log::warn!("Failed to disable HVCI: {:#}", e);
+                        log::error!("Failed to disable HVCI: {:#}", e);
                     }
 
-                    log::warn!("The system must restart to apply changes to the system settings.");
+                    log::info!("The system must restart to apply changes to the system settings.");
                     let should_restart =
-                        inquire::prompt_confirmation("Do you want to restart now?")
+                        utils::confirm_default("Do you want to restart now?", true)
                             .context("prompt for restart")?;
 
                     if should_restart {
+                        log::info!("Restarting system");
+
                         utils::schedule_restart()
                             .await
                             .context("schedule restart")?;
+
+                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                     }
 
-                    std::process::exit(0);
+                    anyhow::bail!("Please restart the system yourself and try again.");
                 }
             }
             e => anyhow::bail!(e),
