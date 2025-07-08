@@ -4,9 +4,7 @@ use crate::{api, components, game, utils};
 
 pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> anyhow::Result<()> {
     for artifact in enhancer.required_artifacts() {
-        log::info!("Downloading {}", artifact.name());
-
-        api::download_latest_artifact_version(http, artifact.slug(), artifact.file_name())
+        api::download_latest_artifact_version(http, &artifact)
             .await
             .context("failed to download {}")?;
     }
