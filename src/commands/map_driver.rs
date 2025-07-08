@@ -20,7 +20,7 @@ pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
         }
     }
 
-    api::download_latest_artifact_version(http, components::Artifact::KernelDriver)
+    api::download_latest_artifact_version(http, &components::Artifact::KernelDriver)
         .await
         .context("failed to download kernel driver")?;
 

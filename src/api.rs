@@ -136,7 +136,7 @@ pub async fn get_latest_artifact_track_version(
 
 pub async fn download_latest_artifact_version(
     http: &Client,
-    artifact: components::Artifact,
+    artifact: &components::Artifact,
 ) -> anyhow::Result<PathBuf> {
     let latest_version = get_latest_artifact_version(http, artifact.slug())
         .await
