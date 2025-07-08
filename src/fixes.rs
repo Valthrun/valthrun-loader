@@ -21,7 +21,7 @@ pub async fn execute_nal_fix(http: &reqwest::Client) -> anyhow::Result<()> {
 
     utils::download_file(
         http,
-        "https://github.com/VollRagm/NalFix/releases/latest/download/NalFix.exe",
+        "https://github.com/sinjs/NalFix/releases/latest/download/NalFix.exe",
         &path,
     )
     .await
