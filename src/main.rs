@@ -64,7 +64,7 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let http = reqwest::Client::new();
 
     log::info!(
-        "Welcome to the Valthrun Loader v{} ({})",
+        "Welcome to the Valthrun Loader v{} (#{})",
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH")
     );
@@ -102,7 +102,7 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
         AppCommand::Version => {
             log::info!("Valthrun Loader");
             log::info!("  Version: v{}", env!("CARGO_PKG_VERSION"));
-            log::info!("  Build: {} ({})", env!("GIT_HASH"), env!("BUILD_TIME"))
+            log::info!("  Build: {} (#{})", env!("GIT_HASH"), env!("BUILD_TIME"))
         }
         AppCommand::ExecuteUpdate(command) => {
             if let Err(error) = updater::execute(&command).await {

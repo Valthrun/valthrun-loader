@@ -87,7 +87,7 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
     log::warn!("Your version of the Valthrun loader is outdated.");
     if !utils::confirm_default(
         &format!(
-            "Do you want to update to v{} ({})?",
+            "Do you want to update to v{} (#{})?",
             update.0.version, update.0.version_hash
         ),
         true,
