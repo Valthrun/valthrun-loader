@@ -24,7 +24,7 @@ pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> a
 
         if utils::confirm_default("Do you want to launch the game?", true)? {
             log::info!("Waiting for Counter-Strike 2 to start");
-            game::launch_and_wait(APP_CS2_NAME, APP_CS2_URL)
+            game::launch_and_wait(APP_CS2_URL, APP_CS2_NAME)
                 .await
                 .context("failed to wait for cs2 to launch")?;
 
