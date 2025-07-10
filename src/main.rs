@@ -1,7 +1,7 @@
-use std::process::ExitCode;
+use std::{path::PathBuf, process::ExitCode};
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand, builder::BoolishValueParser};
 
 mod api;
 mod commands;
@@ -37,12 +37,36 @@ pub enum AppCommand {
 
     /// Display the version
     Version,
+
+    /// DO NOT USE:  
+    /// This subcommand is invoked by the old executable in an update process.  
+    /// It's not intended for manual use!
+    #[clap(hide = true)]
+    ExecuteUpdate(CommandExecuteUpdate),
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct CommandExecuteUpdate {
+    #[clap(long)]
+    pub target_file: PathBuf,
+
+    #[clap(long)]
+    pub source_version: String,
+
+    #[clap(long)]
+    pub source_hash: String,
+
+    #[clap(long, action = ArgAction::Set, value_parser = BoolishValueParser::new())]
+    pub console_invoked: bool,
 }
 
 async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let http = reqwest::Client::new();
 
-    updater::ui_updater(&http).await?;
+    if !matches!(&args.command, Some(AppCommand::ExecuteUpdate(_))) {
+        /* only check for updates if we're not the updater itself */
+        updater::ui_updater(&http).await?;
+    }
 
     let command = args.command.map(Ok).unwrap_or_else(ui::app_menu)?;
 
@@ -70,6 +94,21 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
             log::info!("Valthrun Loader");
             log::info!("  Version: v{}", env!("CARGO_PKG_VERSION"));
             log::info!("  Build: {} ({})", env!("GIT_HASH"), env!("BUILD_TIME"))
+        }
+        AppCommand::ExecuteUpdate(command) => {
+            if let Err(error) = updater::execute(&command).await {
+                /* Update failed. Use the spawned console window to notify the user. */
+                log::error!("Failed to update the Valthrun loader: {error}");
+                utils::console_pause();
+                std::process::exit(1);
+            } else {
+                /*
+                 * Update succeeded.
+                 * The updated app should have been started automatically.
+                 * Exit the updater.
+                 */
+                std::process::exit(0);
+            }
         }
     }
 

@@ -1,7 +1,9 @@
+use std::{env, fs, path::PathBuf, process::Command, time::Duration};
+
 use anyhow::Context;
 use futures::StreamExt;
 
-use crate::{api, utils};
+use crate::{CommandExecuteUpdate, api, utils};
 
 #[derive(Debug, Clone)]
 struct Update(api::Version);
@@ -14,7 +16,12 @@ impl Update {
         )
     }
 
-    pub async fn download_and_install(&self, http: &reqwest::Client) -> anyhow::Result<()> {
+    pub async fn download_update(&self, http: &reqwest::Client) -> anyhow::Result<PathBuf> {
+        if let Ok(mock_updater) = env::var("VTL_UPDATER_EXE") {
+            log::debug!("Skipping update download. Using mock file at {mock_updater}");
+            return Ok(PathBuf::from(mock_updater));
+        }
+
         let mut stream = http
             .get(self.download_url())
             .send()
@@ -24,17 +31,17 @@ impl Update {
             .bytes_stream();
 
         let file = tempfile::NamedTempFile::new().context("create tempfile")?;
-        let mut buf = std::io::BufWriter::new(&file);
+        {
+            let mut buf = std::io::BufWriter::new(&file);
 
-        while let Some(item) = stream.next().await {
-            std::io::copy(&mut item?.as_ref(), &mut buf).context("copy data")?;
+            while let Some(item) = stream.next().await {
+                std::io::copy(&mut item?.as_ref(), &mut buf).context("copy data")?;
+            }
+
+            log::debug!("Downloaded update to {}", file.path().display());
         }
-
-        log::debug!("Downloaded update to {}", file.path().display());
-
-        self_replace::self_replace(file.path()).context("replace self")?;
-
-        Ok(())
+        let (_file, file_path) = file.keep().context("keep update")?;
+        Ok(file_path)
     }
 }
 
@@ -101,57 +108,59 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    update
-        .download_and_install(http)
+    let updater = update
+        .download_update(http)
         .await
         .context("download and install update")?;
 
-    log::debug!("Update installed successfully. Restarting process");
+    log::info!("Update downloaded successfully. Installing and restarting...");
+    let _ = tokio::time::sleep(Duration::from_secs(1)).await;
 
-    restart().await;
+    let current_file = env::current_exe().context("current exe")?;
+    let _update_process = Command::new(updater)
+        .arg("execute-update")
+        .arg("--target-file")
+        .arg(format!("{}", current_file.display()))
+        .arg("--source-version")
+        .arg(env!("CARGO_PKG_VERSION"))
+        .arg("--source-hash")
+        .arg(env!("GIT_HASH"))
+        .arg("--console-invoked")
+        .arg(format!("{}", utils::is_console_invoked()))
+        .spawn()
+        .context("invoking updater")?;
+
+    /* exit early and let the update do it's job */
+    std::process::exit(0);
 }
 
-async fn restart() -> ! {
-    async fn restart_internal() -> anyhow::Result<()> {
-        let current_exe = std::env::current_exe()?;
+pub async fn execute(command: &CommandExecuteUpdate) -> anyhow::Result<()> {
+    log::info!(
+        "Updating from {} (#{}) to {} (#{})",
+        command.source_version,
+        command.source_hash,
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    );
 
-        if utils::is_console_invoked() {
-            // If the loader is invoked from the command line, just spawn the process with the stdio inherited
-            // and wait for it to exit.
+    fs::copy(
+        &env::current_exe().context("current exe")?,
+        &command.target_file,
+    )
+    .context("copy new version")?;
 
-            let exit = std::process::Command::new(current_exe)
-                .args(std::env::args_os().skip(1))
-                .spawn()?
-                .wait()?
-                .code()
-                .unwrap_or(1);
-
-            std::process::exit(exit);
-        } else {
-            // If the loader is invoked normally, use Start-Process since that will not break is_console_invoked().
-            // Arguments do not matter in this case, and the current process exits after spawning the new one.
-
-            utils::invoke_ps_command(&format!(
-                "Start-Process -FilePath '{}'",
-                current_exe.display(),
-            ))
-            .await?;
-
-            std::process::exit(0)
-        }
+    if let Err(error) = self_replace::self_delete() {
+        log::warn!("Failed to mark the update as delete after exit: {error}");
     }
 
-    if let Err(e) = restart_internal()
-        .await
-        .context("Failed to restart the loader")
-    {
-        log::error!("{:#}", e);
-        log::error!("Please restart the loader manually.");
-
-        if utils::is_console_invoked() {
-            utils::console_pause();
-        }
+    if command.console_invoked {
+        log::info!("Update successful. You can not run the Valthrun loader again.");
+    } else {
+        log::info!("Update successful. Launching Valthrun loader.");
+        let _target = Command::new(&command.target_file)
+            .spawn()
+            .context("launch updated loader")?;
     }
 
-    std::process::exit(0);
+    Ok(())
 }
