@@ -76,7 +76,7 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> ExitCode {
     let args = match AppArgs::try_parse() {
         Ok(args) => args,
