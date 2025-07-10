@@ -63,7 +63,10 @@ pub struct CommandExecuteUpdate {
 async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let http = reqwest::Client::new();
 
-    if !matches!(&args.command, Some(AppCommand::ExecuteUpdate(_))) {
+    if !matches!(
+        &args.command,
+        Some(AppCommand::ExecuteUpdate(_) | AppCommand::Version)
+    ) {
         /* only check for updates if we're not the updater itself */
         updater::ui_updater(&http).await?;
     }
