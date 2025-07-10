@@ -109,7 +109,7 @@ async fn main() -> ExitCode {
     };
 
     if !utils::is_console_invoked() {
-        utils::console_pause();
+        let _ = inquire::prompt_text("Press enter to exit...");
     }
 
     status
