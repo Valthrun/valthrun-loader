@@ -63,6 +63,12 @@ pub struct CommandExecuteUpdate {
 async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let http = reqwest::Client::new();
 
+    log::info!(
+        "Welcome to the Valthrun Loader v{} ({})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    );
+
     if !matches!(
         &args.command,
         Some(AppCommand::ExecuteUpdate(_) | AppCommand::Version)

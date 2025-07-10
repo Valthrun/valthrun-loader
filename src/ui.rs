@@ -74,12 +74,6 @@ const APP_MENU_LAUNCH: &Menu = &Menu {
 };
 
 pub fn app_menu() -> anyhow::Result<AppCommand> {
-    log::info!(
-        "Welcome to the Valthrun Loader v{} ({})",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    );
-
     let mut current_menu = APP_MENU;
     loop {
         let choice = inquire::Select::new(
