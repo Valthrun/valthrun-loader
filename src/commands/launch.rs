@@ -48,7 +48,10 @@ pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> a
     .await
     .context("failed to start overlay")?;
 
-    log::info!("Valthrun will now load. Have fun!");
+    log::info!(
+        "The {} will now launch. Have fun :)",
+        enhancer.artifact_to_execute().name()
+    );
 
     Ok(())
 }
