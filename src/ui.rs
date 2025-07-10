@@ -57,7 +57,7 @@ const APP_MENU_LAUNCH: &Menu = &Menu {
 
 pub fn app_menu() -> anyhow::Result<AppCommand> {
     log::info!(
-        "Welcome to the Valthrun Loader v{} ({})",
+        "Welcome to the Valthrun Loader v{} (#{})",
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH")
     );

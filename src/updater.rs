@@ -91,12 +91,12 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
 
     log::info!("A new update for the loader is available.");
     log::info!(
-        "  Installed version: {} ({})",
+        "  Installed version: {} (#{})",
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH")
     );
     log::info!(
-        "  Available version: {} ({})",
+        "  Available version: {} (#{})",
         update.0.version,
         update.0.version_hash
     );

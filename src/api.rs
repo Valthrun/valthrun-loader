@@ -157,14 +157,14 @@ pub async fn download_latest_artifact_version(
     if should_download {
         if output_path.is_file() {
             log::info!(
-                "{} is outdated. Downloading new version {} ({}).",
+                "{} is outdated. Downloading new version {} (#{}).",
                 artifact.name(),
                 latest_version.version,
                 latest_version.version_hash
             );
         } else {
             log::info!(
-                "{} not found locally. Downloading version {} ({}).",
+                "{} not found locally. Downloading version {} (#{}).",
                 artifact.name(),
                 latest_version.version,
                 latest_version.version_hash
