@@ -83,15 +83,15 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
                 .await
                 .context("execute launch enhancer command")?;
         }
-        AppCommand::Launch { enhancer } => {
-            commands::launch(&http, enhancer)
-                .await
-                .context("execute launch enhancer command")?;
-        }
         AppCommand::MapDriver => {
             commands::map_driver(&http)
                 .await
                 .context("execute map driver command")?;
+        }
+        AppCommand::Launch { enhancer } => {
+            commands::launch(&http, enhancer)
+                .await
+                .context("execute launch enhancer command")?;
         }
         AppCommand::Version => {
             log::info!("Valthrun Loader");
