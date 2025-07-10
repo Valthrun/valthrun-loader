@@ -66,8 +66,20 @@ async fn check_for_updates(http: &reqwest::Client) -> anyhow::Result<Option<Upda
 }
 
 pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
-    let Some(update) = check_for_updates(http).await.context("check for updates")? else {
-        return Ok(());
+    let update = match check_for_updates(http).await {
+        Ok(Some(update)) => update,
+        Ok(None) => {
+            log::info!(
+                "Valthrun loader {} (#{}) (up to date)",
+                env!("CARGO_PKG_VERSION"),
+                env!("GIT_HASH")
+            );
+            return Ok(());
+        }
+        Err(error) => {
+            log::warn!("Failed to check for loader updates: {error}");
+            return Ok(());
+        }
     };
 
     log::info!("A new update for the loader is available.");
