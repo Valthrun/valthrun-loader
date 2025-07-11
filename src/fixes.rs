@@ -105,7 +105,7 @@ pub async fn is_defender_enabled() -> anyhow::Result<bool> {
 
     let output = String::from_utf8_lossy(&output.stdout);
 
-    parse_powershell_boolean(output)
+    Ok(parse_powershell_boolean(output).unwrap_or(false))
 }
 
 pub async fn has_defender_exclusion(path: &Path) -> anyhow::Result<bool> {
