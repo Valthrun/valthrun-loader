@@ -19,8 +19,8 @@ const APP_MENU: &Menu = &Menu {
     title: "Please select the command you want to execute:",
     items: &[
         MenuItem {
-            name: "Quick launch Valthrun CS2 Overlay with KDMapper",
-            action: MenuAction::Command(AppCommand::QuickStart),
+            name: "Quick start with predefined profiles",
+            action: MenuAction::Submenu(APP_MENU_QUICK_START),
         },
         MenuItem {
             name: "Launch an individual component",
@@ -29,6 +29,24 @@ const APP_MENU: &Menu = &Menu {
         MenuItem {
             name: "Show loader version",
             action: MenuAction::Command(AppCommand::Version),
+        },
+    ],
+};
+
+const APP_MENU_QUICK_START: &Menu = &Menu {
+    title: "Please select the profile you want to start:",
+    items: &[
+        MenuItem {
+            name: "CS2 Overlay with KDMapper",
+            action: MenuAction::Command(AppCommand::QuickStart {
+                enhancer: Enhancer::Cs2Overlay,
+            }),
+        },
+        MenuItem {
+            name: "CS2 Web Radar with KDMapper",
+            action: MenuAction::Command(AppCommand::QuickStart {
+                enhancer: Enhancer::Cs2Overlay,
+            }),
         },
     ],
 };
@@ -56,12 +74,6 @@ const APP_MENU_LAUNCH: &Menu = &Menu {
 };
 
 pub fn app_menu() -> anyhow::Result<AppCommand> {
-    log::info!(
-        "Welcome to the Valthrun Loader v{} (#{})",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    );
-
     let mut current_menu = APP_MENU;
     loop {
         let choice = inquire::Select::new(

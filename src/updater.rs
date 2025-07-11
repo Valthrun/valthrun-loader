@@ -76,11 +76,6 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
     let update = match check_for_updates(http).await {
         Ok(Some(update)) => update,
         Ok(None) => {
-            log::info!(
-                "Valthrun loader {} (#{}) (up to date)",
-                env!("CARGO_PKG_VERSION"),
-                env!("GIT_HASH")
-            );
             return Ok(());
         }
         Err(error) => {
@@ -89,25 +84,18 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
         }
     };
 
-    log::info!("A new update for the loader is available.");
-    log::info!(
-        "  Installed version: {} (#{})",
-        env!("CARGO_PKG_VERSION"),
-        env!("GIT_HASH")
-    );
-    log::info!(
-        "  Available version: {} (#{})",
-        update.0.version,
-        update.0.version_hash
-    );
-
+    log::warn!("Your version of the Valthrun loader is outdated.");
     if !utils::confirm_default(
-        "Do you want to download and install the latest version?",
+        &format!(
+            "Do you want to update to v{} (#{})?",
+            update.0.version, update.0.version_hash
+        ),
         true,
     )? {
         return Ok(());
     }
 
+    log::info!("Downloading update...");
     let updater = update
         .download_update(http)
         .await

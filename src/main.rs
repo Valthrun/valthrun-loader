@@ -27,7 +27,7 @@ pub struct AppArgs {
 #[derive(Subcommand, Debug, Clone)]
 pub enum AppCommand {
     /// Quickly launch Valthrun with all the default settings and commands
-    QuickStart,
+    QuickStart { enhancer: components::Enhancer },
 
     /// Download and map the driver
     MapDriver,
@@ -63,6 +63,12 @@ pub struct CommandExecuteUpdate {
 async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let http = reqwest::Client::new();
 
+    log::info!(
+        "Welcome to the Valthrun Loader v{} (#{})",
+        env!("CARGO_PKG_VERSION"),
+        env!("GIT_HASH")
+    );
+
     if !matches!(
         &args.command,
         Some(AppCommand::ExecuteUpdate(_) | AppCommand::Version)
@@ -74,12 +80,12 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
     let command = args.command.map(Ok).unwrap_or_else(ui::app_menu)?;
 
     match command {
-        AppCommand::QuickStart => {
+        AppCommand::QuickStart { enhancer } => {
             commands::map_driver(&http)
                 .await
                 .context("execute map driver command")?;
 
-            commands::launch(&http, components::Enhancer::Cs2Overlay)
+            commands::launch(&http, enhancer)
                 .await
                 .context("execute launch enhancer command")?;
         }
