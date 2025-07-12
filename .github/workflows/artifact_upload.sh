@@ -17,5 +17,5 @@ echo "Uploading $file_path"
 curl -H "Content-Type:multipart/form-data" \
     -X POST \
     -F "info={\"version\": \"$version\", \"versionHash\": \"$git_commit_shash\", \"updateLatest\": true }" \
-    -F "payload=@$file_path; filename=${artifact}_${git_commit_shash}.${file_name##*.}" \
+    -F "payload=@$file_path; filename=${artifact}.${file_name##*.}" \
     "https://valth.run/api/artifacts/$artifact/$artifact_track?api-key=$ARTIFACT_API_KEY" || exit 1
