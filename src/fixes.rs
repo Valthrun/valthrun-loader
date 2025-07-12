@@ -105,6 +105,8 @@ pub async fn is_defender_enabled() -> anyhow::Result<bool> {
 
     let output = String::from_utf8_lossy(&output.stdout);
 
+    // Command output might be empty because of the weird PowerShell utilities, which is why we default to `false`
+    // See: https://github.com/eclipse-platform/eclipse.platform.ui/issues/2192
     Ok(parse_powershell_boolean(output).unwrap_or(false))
 }
 
