@@ -45,7 +45,7 @@ const APP_MENU_QUICK_START: &Menu = &Menu {
         MenuItem {
             name: "CS2 Web Radar with KDMapper",
             action: MenuAction::Command(AppCommand::QuickStart {
-                enhancer: Enhancer::Cs2Overlay,
+                enhancer: Enhancer::Cs2StandaloneRadar,
             }),
         },
     ],
