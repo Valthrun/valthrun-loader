@@ -1,6 +1,6 @@
 use std::{pin::pin, time::Duration};
 
-use crate::utils;
+use crate::{metrics, utils};
 
 pub async fn is_running(name: &str) -> anyhow::Result<bool> {
     let output = utils::invoke_ps_command(&format!(
@@ -19,12 +19,21 @@ pub async fn wait_for_process(name: &str) -> anyhow::Result<()> {
 }
 
 pub async fn launch_and_wait(url: &str, application_name: &str) -> anyhow::Result<()> {
+    metrics::add_record(
+        "launch-application",
+        format!("url: {url} name: {application_name}"),
+    );
+
     utils::invoke_ps_command(&format!("Start-Process '{url}'")).await?;
 
     let mut wait_process = pin!(self::wait_for_process(application_name));
 
     tokio::select! {
         _ = &mut wait_process => {
+            metrics::add_record(
+                "launch-application-success",
+                format!("url: {url} name: {application_name}"),
+            );
             return Ok(());
         },
         _ = tokio::time::sleep(Duration::from_secs(30)) => {
@@ -34,6 +43,11 @@ pub async fn launch_and_wait(url: &str, application_name: &str) -> anyhow::Resul
 
     log::warn!("Target {application_name} has not been launched automatically.");
     log::warn!("You may want to launch it manually in order to continue.");
+
+    metrics::add_record(
+        "launch-application-timeout",
+        format!("url: {url} name: {application_name}"),
+    );
 
     wait_process.await?;
     Ok(())

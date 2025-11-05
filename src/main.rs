@@ -2,6 +2,7 @@ use std::{path::PathBuf, process::ExitCode};
 
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand, builder::BoolishValueParser};
+use serde::Serialize;
 
 mod api;
 mod commands;
@@ -9,22 +10,27 @@ mod components;
 mod driver;
 mod fixes;
 mod game;
+mod metrics;
 mod ui;
 mod updater;
 mod utils;
 mod version;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize)]
 pub struct AppArgs {
     /// Enable verbose logging ($env:RUST_LOG="trace")
     #[clap(short, long)]
     verbose: bool,
 
+    /// Disable metrics for this application
+    #[clap(long)]
+    disable_metrics: bool,
+
     #[command(subcommand)]
     command: Option<AppCommand>,
 }
 
-#[derive(Subcommand, Debug, Clone)]
+#[derive(Subcommand, Debug, Clone, Serialize)]
 pub enum AppCommand {
     /// Quickly launch Valthrun with all the default settings and commands
     QuickStart { enhancer: components::Enhancer },
@@ -45,7 +51,7 @@ pub enum AppCommand {
     ExecuteUpdate(CommandExecuteUpdate),
 }
 
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Serialize)]
 pub struct CommandExecuteUpdate {
     #[clap(long)]
     pub target_file: PathBuf,
@@ -68,6 +74,9 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
         env!("CARGO_PKG_VERSION"),
         env!("GIT_HASH")
     );
+    metrics::add_record("version-pkg", env!("CARGO_PKG_VERSION"));
+    metrics::add_record("version-git", env!("GIT_HASH"));
+    metrics::add_record("args", serde_json::to_string(&args)?);
 
     if !matches!(
         &args.command,
@@ -109,6 +118,9 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
                 /* Update failed. Use the spawned console window to notify the user. */
                 log::error!("Failed to update the Valthrun loader: {error}");
                 utils::console_pause();
+
+                metrics::add_record("update-error", format!("{error}"));
+                metrics::shutdown();
                 std::process::exit(1);
             } else {
                 /*
@@ -116,6 +128,9 @@ async fn real_main(args: AppArgs) -> Result<ExitCode> {
                  * The updated app should have been started automatically.
                  * Exit the updater.
                  */
+
+                metrics::add_record("update-success", "");
+                metrics::shutdown();
                 std::process::exit(0);
             }
         }
@@ -148,14 +163,25 @@ async fn main() -> ExitCode {
         .parse_default_env()
         .init();
 
+    if !args.disable_metrics {
+        if let Err(error) = metrics::init() {
+            log::debug!("Metrics failed to initialize: {error}");
+        }
+    }
+
     let status = match real_main(args).await {
-        Ok(status) => status,
+        Ok(status) => {
+            metrics::add_record("app-finished", "");
+            status
+        }
         Err(e) => {
             log::error!("{:#}", e);
+            metrics::add_record("error", format!("{e:#}"));
             ExitCode::FAILURE
         }
     };
 
+    metrics::shutdown();
     if !utils::is_console_invoked() {
         let _ = inquire::prompt_text("Press enter to exit...");
     }

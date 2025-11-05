@@ -39,7 +39,7 @@ impl Artifact {
     }
 }
 
-#[derive(ValueEnum, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(ValueEnum, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[clap(rename_all = "kebab-case")]
 pub enum Enhancer {
     Cs2Overlay,

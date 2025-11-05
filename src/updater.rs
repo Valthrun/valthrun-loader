@@ -3,7 +3,7 @@ use std::{env, fs, path::PathBuf, process::Command, time::Duration};
 use anyhow::Context;
 use futures::StreamExt;
 
-use crate::{CommandExecuteUpdate, api, utils};
+use crate::{CommandExecuteUpdate, api, metrics, utils};
 
 #[derive(Debug, Clone)]
 struct Update(api::Version);
@@ -117,6 +117,9 @@ pub async fn ui_updater(http: &reqwest::Client) -> anyhow::Result<()> {
         .arg(format!("{}", utils::is_console_invoked()))
         .spawn()
         .context("invoking updater")?;
+
+    metrics::add_record("self-update", "execute");
+    metrics::shutdown();
 
     /* exit early and let the update do it's job */
     std::process::exit(0);

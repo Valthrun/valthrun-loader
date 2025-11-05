@@ -1,4 +1,4 @@
-use crate::{AppCommand, components::Enhancer};
+use crate::{AppCommand, components::Enhancer, metrics};
 
 struct Menu {
     title: &'static str,
@@ -89,7 +89,10 @@ pub fn app_menu() -> anyhow::Result<AppCommand> {
         .raw_prompt()?;
 
         match &current_menu.items[choice.index].action {
-            MenuAction::Command(command) => return Ok(command.clone()),
+            MenuAction::Command(command) => {
+                metrics::add_record("ui-command", serde_json::to_string(command)?);
+                return Ok(command.clone());
+            }
             MenuAction::Submenu(menu) => current_menu = menu,
         }
     }

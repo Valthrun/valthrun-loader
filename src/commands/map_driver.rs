@@ -1,6 +1,6 @@
 use anyhow::Context;
 
-use crate::{api, components, driver, fixes, utils};
+use crate::{api, components, driver, fixes, metrics, utils};
 
 pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
     log::info!("Checking for interfering services");
@@ -13,9 +13,15 @@ pub async fn map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
             );
 
             if utils::confirm_default("Do you want to stop this service?", true)? {
+                metrics::add_record("service-stop", format!("{}", service.to_string_lossy()));
                 fixes::stop_service(service.to_str()?)
                     .await
                     .context("stop service")?;
+            } else {
+                metrics::add_record(
+                    "service-stop-ignore",
+                    format!("{}", service.to_string_lossy()),
+                );
             }
         }
     }

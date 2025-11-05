@@ -8,6 +8,8 @@ use futures::StreamExt;
 use tokio::process::Command;
 use windows::Win32::System::Console::GetConsoleProcessList;
 
+use crate::metrics;
+
 pub async fn invoke_ps_command(command: &str) -> tokio::io::Result<Output> {
     self::invoke_command(Command::new("powershell").args(&["-Command", &command])).await
 }
@@ -72,6 +74,16 @@ pub async fn download_file(
     url: impl reqwest::IntoUrl,
     path: &Path,
 ) -> anyhow::Result<()> {
+    metrics::add_record(
+        "download-file",
+        format!(
+            "url: {}, name: {}",
+            url.as_str(),
+            path.file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_default()
+        ),
+    );
     log::debug!(
         "Downloading file from {} to {}",
         url.as_str(),
@@ -101,6 +113,9 @@ pub async fn download_file(
 }
 
 pub async fn schedule_restart() -> anyhow::Result<()> {
+    metrics::add_record("schedule-restart", "");
+    metrics::flush(true);
+
     invoke_command(Command::new("shutdown").args(["/r", "/t", "0"])).await?;
 
     std::process::exit(1);

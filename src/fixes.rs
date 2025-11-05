@@ -14,7 +14,10 @@ use windows::{
 };
 use windows_registry::LOCAL_MACHINE;
 
-use crate::utils::{self};
+use crate::{
+    metrics,
+    utils::{self},
+};
 
 pub async fn execute_nal_fix(http: &reqwest::Client) -> anyhow::Result<()> {
     let path = utils::get_downloads_path()?.join("nalfix.exe");
@@ -123,6 +126,13 @@ pub async fn has_defender_exclusion(path: &Path) -> anyhow::Result<bool> {
 }
 
 pub async fn add_defender_exclusion(path: &Path) -> anyhow::Result<()> {
+    metrics::add_record(
+        "defender-exclusion",
+        path.file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_default(),
+    );
+
     utils::invoke_ps_command(&format!(
         "Add-MpPreference -ExclusionPath '{}' -ErrorAction SilentlyContinue",
         path.display()

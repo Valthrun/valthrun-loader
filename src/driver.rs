@@ -2,7 +2,7 @@ use anyhow::Context;
 use thiserror::Error;
 use tokio::process::Command;
 
-use crate::{fixes, utils};
+use crate::{fixes, metrics, utils};
 
 #[derive(Debug, Error)]
 pub enum MapDriverError {
@@ -65,6 +65,7 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
             .context("check defender exclusion")?
     {
         log::warn!("Windows Defender is enabled and there is no exclusion for the driver mapper.");
+
         if utils::confirm_default("Do you want to add an exclusion?", true)? {
             fixes::add_defender_exclusion(&kdmapper_path)
                 .await
@@ -73,6 +74,7 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
     }
 
     if let Err(e) = map_driver().await {
+        metrics::add_record("map-error", format!("{e}"));
         match e {
             MapDriverError::DeviceNalInUse => {
                 fixes::execute_nal_fix(http)
@@ -90,9 +92,11 @@ pub async fn ui_map_driver(http: &reqwest::Client) -> anyhow::Result<()> {
                     true,
                 )? {
                     if let Err(e) = fixes::set_driver_blocklist(false) {
+                        metrics::add_record("error", format!("set-driver-blocklist: {e}"));
                         log::error!("Failed to disable vulnerable driver blocklist: {:#}", e);
                     }
                     if let Err(e) = fixes::set_hvci(false) {
+                        metrics::add_record("error", format!("disable-hvci: {e}"));
                         log::error!("Failed to disable HVCI: {:#}", e);
                     }
 

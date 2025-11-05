@@ -4,6 +4,8 @@ version = "0.2.0"
 edition = "2024"
 
 [dependencies]
+vtd-metrics = { git = "https://github.com/Valthrun/valthrun-driver", rev = "dc9721c" }
+
 anyhow = "1.0.98"
 chrono = { version = "0.4.41", features = ["serde"] }
 clap = { version = "4.5.40", features = ["derive"] }
@@ -25,6 +27,7 @@ windows = { version = "0.61.3", features = [
 ] }
 windows-registry = "0.5.3"
 windows-result = "0.3.4"
+ureq = "3.1.2"
 
 [build-dependencies]
 chrono = "0.4.41"

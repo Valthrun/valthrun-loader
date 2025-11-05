@@ -2,12 +2,14 @@ use std::time::Duration;
 
 use anyhow::Context;
 
-use crate::{api, components, game, utils};
+use crate::{api, components, game, metrics, utils};
 
 const APP_CS2_NAME: &str = "cs2";
 const APP_CS2_URL: &str = "steam://run/730";
 
 pub async fn launch(http: &reqwest::Client, enhancer: components::Enhancer) -> anyhow::Result<()> {
+    metrics::add_record("launch-enhancer", format!("{:?}", enhancer));
+
     for artifact in enhancer.required_artifacts() {
         api::download_latest_artifact_version(http, &artifact)
             .await
