@@ -1,68 +1,74 @@
 name: Rust
 
 on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
+    push:
+        branches: ["master"]
+    pull_request:
+        branches: ["master"]
 
 permissions:
-  contents: write
+    contents: write
 
 env:
-  CARGO_TERM_COLOR: always
+    CARGO_TERM_COLOR: always
 
 jobs:
-  rust-check:
-    name: Rust Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Check fmt
-        run: rustup component add rustfmt && cargo fmt --check
+    rust-check:
+        name: Rust Check
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: nightly
+                  override: true
+            - uses: actions/checkout@v3
+              with:
+                  submodules: recursive
+            - name: Check fmt
+              run: rustup component add rustfmt && cargo fmt --check
 
-  build-loader:
-    name: Build Loader
-    runs-on: windows-latest
-    needs: [rust-check]
+    build-loader:
+        name: Build Loader
+        runs-on: windows-latest
+        needs: [rust-check]
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+        steps:
+            - name: Install toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: nightly
+                  override: true
 
-      - name: Get package version
-        shell: bash
-        run: |
-          VERSION=$(cargo pkgid --manifest-path Cargo.toml | cut -d# -f2 | cut -d: -f2)
-          echo "Package version: $VERSION"
-          echo "ARTIFACT_VERSION=$VERSION" >> "$GITHUB_ENV"
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
+            - name: Get package version
+              shell: bash
+              run: |
+                  VERSION=$(cargo pkgid --manifest-path Cargo.toml | cut -d# -f2 | cut -d: -f2)
+                  echo "Package version: $VERSION"
+                  echo "ARTIFACT_VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      - name: Build
-        run: cargo build --verbose --release --bin valthrun-loader
-        env:
-          RUSTFLAGS: -Ctarget-feature=+crt-static
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  cache-on-failure: true
 
-      - name: Upload executable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: loader.exe
-          path: target/release/valthrun-loader.exe
+            - name: Build
+              run: cargo build --verbose --release --bin valthrun-loader
+              env:
+                  RUSTFLAGS: -Ctarget-feature=+crt-static
 
-      - name: Upload release build to portal
-        shell: bash
-        run: .github/workflows/artifact_upload.sh valthrun-loader win32 target/release/valthrun-loader.exe
-        if: ${{ github.event_name != 'pull_request' }}
-        env:
-          ARTIFACT_API_KEY: ${{ secrets.ARTIFACT_API_KEY }}
+            - name: Upload executable artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: loader.exe
+                  path: target/release/valthrun-loader.exe
+
+            - name: Upload release build to portal
+              shell: bash
+              run: .github/workflows/artifact_upload.sh valthrun-loader win32 target/release/valthrun-loader.exe
+              if: ${{ github.event_name != 'pull_request' }}
+              env:
+                  ARTIFACT_API_KEY: ${{ secrets.ARTIFACT_API_KEY }}
