@@ -92,6 +92,7 @@ pub async fn download_file(
 
     let mut stream = http
         .get(url)
+        .header("User-Agent", "valthrun-loader")
         .send()
         .await
         .context("send request")?

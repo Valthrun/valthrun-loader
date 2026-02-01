@@ -10,6 +10,17 @@ pub enum Artifact {
     KernelDriver,
 }
 
+#[derive(Debug)]
+pub enum ArtifactSource {
+    Portal {
+        slug: &'static str,
+    },
+    GithubRelease {
+        owner: &'static str,
+        repo: &'static str,
+    },
+}
+
 impl Artifact {
     pub const fn name(&self) -> &'static str {
         match self {
@@ -34,7 +45,25 @@ impl Artifact {
             Artifact::Cs2Overlay => "cs2_overlay.exe",
             Artifact::Cs2RadarClient => "cs2_radar_client.exe",
             Artifact::DriverInterfaceKernel => "driver_interface_kernel.dll",
-            Artifact::KernelDriver => "kernel_driver.sys",
+            Artifact::KernelDriver => "driver_standalone.sys",
+        }
+    }
+
+    pub const fn source(&self) -> &'static ArtifactSource {
+        match self {
+            Artifact::Cs2Overlay => &ArtifactSource::Portal {
+                slug: "cs2-overlay",
+            },
+            Artifact::Cs2RadarClient => &ArtifactSource::Portal {
+                slug: "cs2-radar-client",
+            },
+            Artifact::DriverInterfaceKernel => &ArtifactSource::Portal {
+                slug: "driver-interface-kernel",
+            },
+            Artifact::KernelDriver => &ArtifactSource::GithubRelease {
+                owner: "PetrSeifert",
+                repo: "valthrun-driver-kernel",
+            },
         }
     }
 }

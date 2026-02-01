@@ -3,10 +3,10 @@ use std::{env, fs, path::PathBuf, process::Command, time::Duration};
 use anyhow::Context;
 use futures::StreamExt;
 
-use crate::{CommandExecuteUpdate, api, metrics, utils};
+use crate::{CommandExecuteUpdate, metrics, portal, utils};
 
 #[derive(Debug, Clone)]
-struct Update(api::Version);
+struct Update(portal::Version);
 
 impl Update {
     pub fn download_url(&self) -> String {
@@ -53,9 +53,10 @@ async fn check_for_updates(http: &reqwest::Client) -> anyhow::Result<Option<Upda
         return Ok(None);
     }
 
-    let latest_version = api::get_latest_artifact_track_version(http, "valthrun-loader", "win32")
-        .await
-        .context("failed to get latest version")?;
+    let latest_version =
+        portal::get_latest_artifact_track_version(http, "valthrun-loader", "win32")
+            .await
+            .context("failed to get latest version")?;
 
     let has_update = env!("GIT_HASH") != latest_version.version_hash;
 

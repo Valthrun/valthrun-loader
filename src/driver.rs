@@ -31,7 +31,7 @@ pub async fn map_driver() -> Result<bool, MapDriverError> {
         .context("get downloads path")
         .unwrap();
     let kdmapper_path = downloads_path.join("kdmapper.exe");
-    let driver_path = downloads_path.join("kernel_driver.sys");
+    let driver_path = downloads_path.join("driver_standalone.sys");
 
     if let Err(e) = fixes::add_defender_exclusion(&kdmapper_path).await {
         log::warn!("Failed to add exclusion for Windows Defender: {:#}", e);
